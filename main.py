@@ -32,7 +32,7 @@ class Runner:
             elif isinstance(message, model.ServerMessage.Finish):
                 break
             elif isinstance(message, model.ServerMessage.DebugUpdate):
-                debug_update(message.player_view, debug_interface)
+                strategy.debug_update(message.player_view, debug_interface)
                 model.ClientMessage.DebugUpdateDone().write_to(self.writer)
                 self.writer.flush()
             else:

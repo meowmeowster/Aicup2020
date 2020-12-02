@@ -20,9 +20,7 @@ def is_mine(player_view, e):
     return True if e.player_id == player_view.my_id and e.entity_type != et.RESOURCE else False
 
 
-def debug_update(player_view, debug_interface):
-    debug_interface.send(model.DebugCommand.Clear())
-    debug_interface.get_state()
+
 
 
 class MyStrategy:
@@ -40,6 +38,11 @@ class MyStrategy:
         print(len(countlist))
 
         for e in countlist:
+            #if e.entity_type == et.BUILDER_UNIT:
+            builders = list(filter(lambda s: s.entity_type == et.BUILDER_UNIT, countlist))
+            melee = list(filter(lambda s: s.entity_type == et.MELEE_UNIT, countlist))
+            ranged = list(filter(lambda s: s.entity_type == et.RANGED_UNIT, countlist))
+
 
             p = player_view.entity_properties[e.entity_type]
             if e.player_id == my_id:
@@ -86,3 +89,6 @@ class MyStrategy:
 
         return model.Action(actions)
 
+    def debug_update(self, player_view, debug_interface):
+        debug_interface.send(model.DebugCommand.Clear())
+        debug_interface.get_state()

@@ -39,6 +39,7 @@ class Runner:
                 raise Exception("Unexpected server message")
 
 
+
 if __name__ == "__main__":
     subprocess.Popen("aicup2020/aicup2020.exe --config config.json")
 

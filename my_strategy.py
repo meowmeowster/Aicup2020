@@ -20,9 +20,6 @@ def is_mine(player_view, e):
     return True if e.player_id == player_view.my_id and e.entity_type != et.RESOURCE else False
 
 
-
-
-
 class MyStrategy:
 
     def get_action(self, player_view, debug_interface):
@@ -35,15 +32,10 @@ class MyStrategy:
             if not is_mine(player_view, e):
                 continue
             countlist.append(e)
-        print(len(countlist))
 
         for e in countlist:
-            #if e.entity_type == et.BUILDER_UNIT:
-            builders = list(filter(lambda s: s.entity_type == et.BUILDER_UNIT, countlist))
-            melee = list(filter(lambda s: s.entity_type == et.MELEE_UNIT, countlist))
-            ranged = list(filter(lambda s: s.entity_type == et.RANGED_UNIT, countlist))
 
-
+            # старый код
             p = player_view.entity_properties[e.entity_type]
             if e.player_id == my_id:
                 m = None
@@ -76,7 +68,59 @@ class MyStrategy:
                                 e.position.y + p.size - 1,
                             )
                         )
+
+                actions[e.id] = model.EntityAction(m, b, a, r)
+
+                # новый код
+
+                builders = list(filter(lambda s: s.entity_type == et.BUILDER_UNIT, countlist))
+                melee = list(filter(lambda s: s.entity_type == et.MELEE_UNIT, countlist))
+                ranged = list(filter(lambda s: s.entity_type == et.RANGED_UNIT, countlist))
+
+                units = len(builders) + len(melee) + len(ranged)
+
+                base_b = list(filter(lambda s: s.entity_type == et.BUILDER_BASE, countlist))
+                base_m = list(filter(lambda s: s.entity_type == et.MELEE_BASE, countlist))
+                base_r = list(filter(lambda s: s.entity_type == et.RANGED_BASE, countlist))
+
+                if e in base_b:
+                    if len(builders) < int(units / 2) or len(builders) < 6:
+                        b = model.build_action.BuildAction(
+                            3,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
                     else:
+                        b = model.build_action.BuildAction(
+                            0,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
+                    actions[e.id] = model.EntityAction(m, b, a, r)
+                if e in base_m:
+                    if len(builders) >= 6 and len(melee) <= len(ranged):
+                        b = model.build_action.BuildAction(
+                            5,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
+                    else:
+                        b = model.build_action.BuildAction(
+                            0,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
+                    actions[e.id] = model.EntityAction(m, b, a, r)
+                if e in base_r:
+                    if len(builders) >= 6 and len(ranged) <= len(melee):
                         b = model.build_action.BuildAction(
                             7,
                             model.vec2_int.Vec2Int(
@@ -84,8 +128,15 @@ class MyStrategy:
                                 e.position.y + p.size - 1,
                             )
                         )
-
-                actions[e.id] = model.EntityAction(m, b, a, r)
+                    else:
+                        b = model.build_action.BuildAction(
+                            0,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
+                    actions[e.id] = model.EntityAction(m, b, a, r)
 
         return model.Action(actions)
 

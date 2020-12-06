@@ -1,8 +1,6 @@
-import random
-
+import math
 import model
 from model.entity_type import EntityType as et
-
 
 def is_unit(e, t=None):
     if t is None:
@@ -83,18 +81,14 @@ class MyStrategy:
                 base_m = list(filter(lambda s: s.entity_type == et.MELEE_BASE, countlist))
                 base_r = list(filter(lambda s: s.entity_type == et.RANGED_BASE, countlist))
 
+                houses = list(filter(lambda s: s.entity_type == et.HOUSE, countlist))
+
+                places = (len(base_b) + len(base_m) + len(base_r) + len(houses)) * 5
+
                 if e in base_b:
-                    if len(builders) < int(units / 2) or len(builders) < 6:
+                    if len(builders) < (6 + len(houses) * 2):
                         b = model.build_action.BuildAction(
                             3,
-                            model.vec2_int.Vec2Int(
-                                e.position.x + p.size,
-                                e.position.y + p.size - 1,
-                            )
-                        )
-                    else:
-                        b = model.build_action.BuildAction(
-                            0,
                             model.vec2_int.Vec2Int(
                                 e.position.x + p.size,
                                 e.position.y + p.size - 1,
@@ -110,14 +104,6 @@ class MyStrategy:
                                 e.position.y + p.size - 1,
                             )
                         )
-                    else:
-                        b = model.build_action.BuildAction(
-                            0,
-                            model.vec2_int.Vec2Int(
-                                e.position.x + p.size,
-                                e.position.y + p.size - 1,
-                            )
-                        )
                     actions[e.id] = model.EntityAction(m, b, a, r)
                 if e in base_r:
                     if len(builders) >= 6 and len(ranged) <= len(melee):
@@ -128,15 +114,34 @@ class MyStrategy:
                                 e.position.y + p.size - 1,
                             )
                         )
-                    else:
+                    actions[e.id] = model.EntityAction(m, b, a, r)
+                if e in builders:
+                    if places < (units + 5):
                         b = model.build_action.BuildAction(
-                            0,
+                            1,
                             model.vec2_int.Vec2Int(
                                 e.position.x + p.size,
                                 e.position.y + p.size - 1,
                             )
                         )
                     actions[e.id] = model.EntityAction(m, b, a, r)
+                if e in houses:
+                    if not e.active:
+
+                        radius = 999999
+                        for e2 in builders:
+                            new_radius = int(math.sqrt(math.pow(e2.position.x - e.position.x, 2) + math.pow(e2.position.y - e.position.y, 2)))
+                            if new_radius < radius or radius < 4:
+                                radius = new_radius
+                                chosen = e2
+
+                                m = model.move_action.MoveAction(e.position, True, True)
+                                b = None
+                                a = None
+                                r = None
+                                if radius < 2:
+                                    r = model.repair_action.RepairAction(e.id)
+                                actions[chosen.id] = model.EntityAction(m, b, a, r)
 
         return model.Action(actions)
 

@@ -116,6 +116,7 @@ class MyStrategy:
                         )
                     actions[e.id] = model.EntityAction(m, b, a, r)
                 if e in builders:
+                    b = None
                     if places < (units + 5):
                         b = model.build_action.BuildAction(
                             1,
@@ -126,8 +127,7 @@ class MyStrategy:
                         )
                     actions[e.id] = model.EntityAction(m, b, a, r)
                 if e in houses:
-                    if not e.active:
-
+                    if (not e.active) or (e.health < int(player_view.entity_properties[e.entity_type].max_health/2)):
                         radius = 999999
                         for e2 in builders:
                             new_radius = int(math.sqrt(math.pow(e2.position.x - e.position.x, 2) + math.pow(e2.position.y - e.position.y, 2)))
@@ -138,8 +138,11 @@ class MyStrategy:
                                 m = model.move_action.MoveAction(e.position, True, True)
                                 b = None
                                 a = None
-                                r = None
+                                #r = None
                                 if radius < 2:
+                                    m = None
+                                    b = None
+                                    a = None
                                     r = model.repair_action.RepairAction(e.id)
                                 actions[chosen.id] = model.EntityAction(m, b, a, r)
 

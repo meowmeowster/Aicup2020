@@ -82,11 +82,11 @@ class MyStrategy:
                 base_r = list(filter(lambda s: s.entity_type == et.RANGED_BASE, countlist))
 
                 houses = list(filter(lambda s: s.entity_type == et.HOUSE, countlist))
-
+                walls = list(filter(lambda s: s.entity_type == et.WALL, countlist))
                 places = (len(base_b) + len(base_m) + len(base_r) + len(houses)) * 5
 
                 if e in base_b:
-                    if len(builders) < (6 + len(houses) * 2):
+                    if len(builders) < (7 + len(houses) * 2) and player_view.current_tick < 800:
                         b = model.build_action.BuildAction(
                             3,
                             model.vec2_int.Vec2Int(
@@ -96,7 +96,7 @@ class MyStrategy:
                         )
                     actions[e.id] = model.EntityAction(m, b, a, r)
                 if e in base_m:
-                    if len(builders) >= 6 and len(melee) <= len(ranged):
+                    if len(builders) >= 7 and len(melee) * len(base_m) <= len(ranged) * len(base_r):
                         b = model.build_action.BuildAction(
                             5,
                             model.vec2_int.Vec2Int(
@@ -106,7 +106,7 @@ class MyStrategy:
                         )
                     actions[e.id] = model.EntityAction(m, b, a, r)
                 if e in base_r:
-                    if len(builders) >= 6 and len(ranged) <= len(melee):
+                    if len(builders) >= 7 and len(ranged) * len(base_r) <= len(melee) * len(base_m):
                         b = model.build_action.BuildAction(
                             7,
                             model.vec2_int.Vec2Int(
@@ -117,7 +117,7 @@ class MyStrategy:
                     actions[e.id] = model.EntityAction(m, b, a, r)
                 if e in builders:
                     b = None
-                    if places < (units + 5):
+                    if places < (units + 5) and player_view.current_tick < 800:
                         b = model.build_action.BuildAction(
                             1,
                             model.vec2_int.Vec2Int(
@@ -125,8 +125,16 @@ class MyStrategy:
                                 e.position.y + p.size - 1,
                             )
                         )
+                    if player_view.current_tick >= 800:
+                        b = model.build_action.BuildAction(
+                            0,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
                     actions[e.id] = model.EntityAction(m, b, a, r)
-                if e in houses:
+                if e in houses or e in walls:
                     if (not e.active) or (e.health < int(player_view.entity_properties[e.entity_type].max_health/2)):
                         radius = 999999
                         for e2 in builders:
@@ -138,13 +146,20 @@ class MyStrategy:
                                 m = model.move_action.MoveAction(e.position, True, True)
                                 b = None
                                 a = None
-                                #r = None
                                 if radius < 2:
                                     m = None
                                     b = None
                                     a = None
                                     r = model.repair_action.RepairAction(e.id)
                                 actions[chosen.id] = model.EntityAction(m, b, a, r)
+                if e in melee:
+                    t = model.vec2_int.Vec2Int(int(player_view.map_size/1.1) - 1, int(player_view.map_size/1.1) - 1)
+                    m = model.move_action.MoveAction(t, True, True)
+                if e in ranged:
+                    t = model.vec2_int.Vec2Int(int(player_view.map_size / 1.2) - 1, int(player_view.map_size / 1.2) - 1)
+                    m = model.move_action.MoveAction(t, True, True)
+
+                actions[e.id] = model.EntityAction(m, b, a, r)
 
         return model.Action(actions)
 

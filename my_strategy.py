@@ -2,6 +2,7 @@ import math
 import model
 from model.entity_type import EntityType as et
 
+
 def is_unit(e, t=None):
     if t is None:
         t = [et.BUILDER_UNIT, et.MELEE_UNIT, et.RANGED_UNIT]
@@ -25,11 +26,14 @@ class MyStrategy:
         my_id = player_view.my_id
 
         countlist = []
+        enemylist = []
 
         for e in player_view.entities:
             if not is_mine(player_view, e):
-                continue
-            countlist.append(e)
+                if e.entity_type != et.RESOURCE:
+                    enemylist.append(e)
+            else:
+                countlist.append(e)
 
         for e in countlist:
 
@@ -58,14 +62,6 @@ class MyStrategy:
                             valid_targets=[et.RESOURCE] if e.entity_type == et.BUILDER_UNIT else []
                         )
                     )
-                    if player_view.current_tick < 40:
-                        b = model.build_action.BuildAction(
-                            3,
-                            model.vec2_int.Vec2Int(
-                                e.position.x + p.size,
-                                e.position.y + p.size - 1,
-                            )
-                        )
 
                 actions[e.id] = model.EntityAction(m, b, a, r)
 
@@ -86,7 +82,7 @@ class MyStrategy:
                 places = (len(base_b) + len(base_m) + len(base_r) + len(houses)) * 5
 
                 if e in base_b:
-                    if len(builders) < (7 + len(houses) * 2) and player_view.current_tick < 800:
+                    if len(builders) < (7 + len(houses) * 2) and player_view.current_tick < 900:
                         b = model.build_action.BuildAction(
                             3,
                             model.vec2_int.Vec2Int(
@@ -117,7 +113,9 @@ class MyStrategy:
                     actions[e.id] = model.EntityAction(m, b, a, r)
                 if e in builders:
                     b = None
-                    if places < (units + 5) and player_view.current_tick < 800:
+                    if len(houses) < 1:
+                        t = model.vec2_int.Vec2Int(player_view.map_size - 1, player_view.map_size - 1)
+                        m = model.move_action.MoveAction(t, True, True)
                         b = model.build_action.BuildAction(
                             1,
                             model.vec2_int.Vec2Int(
@@ -125,7 +123,48 @@ class MyStrategy:
                                 e.position.y + p.size - 1,
                             )
                         )
-                    if player_view.current_tick >= 800:
+
+                    if len(base_m) < 1 + int(units/50):
+                        t = model.vec2_int.Vec2Int(player_view.map_size - 1, player_view.map_size - 1)
+                        m = model.move_action.MoveAction(t, True, True)
+                        b = model.build_action.BuildAction(
+                            4,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
+                    if len(base_r) < 1 + int(units/50):
+                        t = model.vec2_int.Vec2Int(player_view.map_size - 1, player_view.map_size - 1)
+                        m = model.move_action.MoveAction(t, True, True)
+                        b = model.build_action.BuildAction(
+                            6,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
+
+                    if len(base_b) < 1 + int(units/50):
+                        t = model.vec2_int.Vec2Int(player_view.map_size - 1, player_view.map_size - 1)
+                        m = model.move_action.MoveAction(t, True, True)
+                        b = model.build_action.BuildAction(
+                            2,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
+
+                    if places < (units + 5) and player_view.current_tick < 900:
+                        b = model.build_action.BuildAction(
+                            1,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
+                    if player_view.current_tick >= 900:
                         b = model.build_action.BuildAction(
                             0,
                             model.vec2_int.Vec2Int(
@@ -134,12 +173,12 @@ class MyStrategy:
                             )
                         )
                     actions[e.id] = model.EntityAction(m, b, a, r)
-                if e in houses or e in walls:
-                    if (not e.active) or (e.health < int(player_view.entity_properties[e.entity_type].max_health/2)):
+                if e in houses or e in walls or e in base_b or e in base_m or e in base_r:
+                    if (not e.active) or (e.health < int(player_view.entity_properties[e.entity_type].max_health)):
                         radius = 999999
                         for e2 in builders:
                             new_radius = int(math.sqrt(math.pow(e2.position.x - e.position.x, 2) + math.pow(e2.position.y - e.position.y, 2)))
-                            if new_radius < radius or radius < 4:
+                            if new_radius < radius or radius < 4 or True:
                                 radius = new_radius
                                 chosen = e2
 
@@ -152,11 +191,64 @@ class MyStrategy:
                                     a = None
                                     r = model.repair_action.RepairAction(e.id)
                                 actions[chosen.id] = model.EntityAction(m, b, a, r)
+
                 if e in melee:
-                    t = model.vec2_int.Vec2Int(int(player_view.map_size/1.1) - 1, int(player_view.map_size/1.1) - 1)
+
+                    if int(e.id) % 2 == 0:
+                        coeff1 = 1
+                    else:
+                        coeff1 = -1
+                    coord_x = int(player_view.map_size / 2 + (math.sin(coeff1 * player_view.current_tick/10 + e.id) * player_view.map_size / 2) / 1.1) - 1
+                    coord_y = int(player_view.map_size / 2 + (math.cos(coeff1 * player_view.current_tick/10 + e.id) * player_view.map_size / 2) / 1.1) - 1
+
+                    if player_view.current_tick < 40:
+                        coord_x = int(player_view.map_size/1.1) - 1
+                        coord_y = int(player_view.map_size/1.1) - 1
+
+                    if len(enemylist) > 0:
+                        radius = 999999
+                        for y2 in enemylist:
+                            new_radius = int(math.sqrt(
+                                math.pow(y2.position.x - e.position.x, 2) + math.pow(y2.position.y - e.position.y, 2)))
+                            if new_radius < radius or radius < 4 or True:
+                                radius = new_radius
+                                chosen = y2
+                                coord_x = chosen.position.x
+                                coord_y = chosen.position.y
+
+                    t = model.vec2_int.Vec2Int(coord_x, coord_y)
                     m = model.move_action.MoveAction(t, True, True)
                 if e in ranged:
-                    t = model.vec2_int.Vec2Int(int(player_view.map_size / 1.2) - 1, int(player_view.map_size / 1.2) - 1)
+
+                    if int(e.id) % 2 == 0:
+                        coeff1 = 1
+                    else:
+                        coeff1 = -1
+                    coord_x = int(player_view.map_size / 2 + (math.sin(coeff1 * player_view.current_tick/12 + e.id + 90) * player_view.map_size / 2) / 1.2) - 1
+                    coord_y = int(player_view.map_size / 2 + (math.cos(coeff1 * player_view.current_tick/12 + e.id + 90) * player_view.map_size / 2) / 1.2) - 1
+
+                    if player_view.current_tick < 20:
+                        coord_x = int(player_view.map_size / 1.2) - 1
+                        coord_y = int(player_view.map_size / 1.2) - 1
+
+                    if len(enemylist) > 0:
+                        radius = 999999
+                        for y2 in enemylist:
+                            new_radius = int(math.sqrt(
+                                math.pow(y2.position.x - e.position.x, 2) + math.pow(y2.position.y - e.position.y, 2)))
+                            if new_radius < radius or radius < 4 or True:
+                                radius = new_radius
+                                chosen = y2
+                                coord_x = chosen.position.x
+                                coord_y = chosen.position.y
+
+                    for yb in countlist:
+                        if (yb in builders or yb in base_b or yb in base_m or yb in base_r) \
+                                and yb.active and yb.health < int(player_view.entity_properties[yb.entity_type].max_health):
+                            coord_x = yb.position.x
+                            coord_y = yb.position.y
+
+                    t = model.vec2_int.Vec2Int(coord_x, coord_y)
                     m = model.move_action.MoveAction(t, True, True)
 
                 actions[e.id] = model.EntityAction(m, b, a, r)

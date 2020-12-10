@@ -77,9 +77,22 @@ class MyStrategy:
                 base_m = list(filter(lambda s: s.entity_type == et.MELEE_BASE, countlist))
                 base_r = list(filter(lambda s: s.entity_type == et.RANGED_BASE, countlist))
 
+                turrets = list(filter(lambda s: s.entity_type == et.TURRET, countlist))
                 houses = list(filter(lambda s: s.entity_type == et.HOUSE, countlist))
                 walls = list(filter(lambda s: s.entity_type == et.WALL, countlist))
                 places = (len(base_b) + len(base_m) + len(base_r) + len(houses)) * 5
+
+                if e in turrets:
+                    m = None
+                    b = None
+                    r = None
+                    a = model.attack_action.AttackAction(
+                        target=None,
+                        auto_attack=model.auto_attack.AutoAttack(
+                            pathfind_range=p.sight_range,
+                            valid_targets=[et.BUILDER_UNIT, et.MELEE_UNIT, et.RANGED_UNIT]
+                        )
+                    )
 
                 if e in base_b:
                     if len(builders) < (7 + len(houses) * 2) and player_view.current_tick < 900:
@@ -102,7 +115,7 @@ class MyStrategy:
                         )
                     actions[e.id] = model.EntityAction(m, b, a, r)
                 if e in base_r:
-                    if len(builders) >= 7 and len(ranged) * len(base_r) <= len(melee) * len(base_m):
+                    if (len(builders) >= 7 and len(ranged) * len(base_r) <= len(melee) * len(base_m)) or player_view.current_tick > 850:
                         b = model.build_action.BuildAction(
                             7,
                             model.vec2_int.Vec2Int(
@@ -123,8 +136,7 @@ class MyStrategy:
                                 e.position.y + p.size - 1,
                             )
                         )
-
-                    if len(base_m) < 1 + int(units/50):
+                    if len(base_m) < 1 + int(units/90):
                         t = model.vec2_int.Vec2Int(player_view.map_size - 1, player_view.map_size - 1)
                         m = model.move_action.MoveAction(t, True, True)
                         b = model.build_action.BuildAction(
@@ -134,7 +146,7 @@ class MyStrategy:
                                 e.position.y + p.size - 1,
                             )
                         )
-                    if len(base_r) < 1 + int(units/50):
+                    if len(base_r) < 1 + int(units/90):
                         t = model.vec2_int.Vec2Int(player_view.map_size - 1, player_view.map_size - 1)
                         m = model.move_action.MoveAction(t, True, True)
                         b = model.build_action.BuildAction(
@@ -145,7 +157,7 @@ class MyStrategy:
                             )
                         )
 
-                    if len(base_b) < 1 + int(units/50):
+                    if len(base_b) < 1 + int(units/80):
                         t = model.vec2_int.Vec2Int(player_view.map_size - 1, player_view.map_size - 1)
                         m = model.move_action.MoveAction(t, True, True)
                         b = model.build_action.BuildAction(
@@ -156,7 +168,7 @@ class MyStrategy:
                             )
                         )
 
-                    if places < (units + 5) and player_view.current_tick < 900:
+                    if places < (units + 15) and player_view.current_tick < 900:
                         b = model.build_action.BuildAction(
                             1,
                             model.vec2_int.Vec2Int(
@@ -164,21 +176,31 @@ class MyStrategy:
                                 e.position.y + p.size - 1,
                             )
                         )
+                    if len(turrets) < int(len(houses)/2):
+                        t = model.vec2_int.Vec2Int(player_view.map_size - 1, player_view.map_size - 1)
+                        m = model.move_action.MoveAction(t, True, True)
+                        b = model.build_action.BuildAction(
+                            9,
+                            model.vec2_int.Vec2Int(
+                                e.position.x + p.size,
+                                e.position.y + p.size - 1,
+                            )
+                        )
                     if player_view.current_tick >= 900:
                         b = model.build_action.BuildAction(
-                            0,
+                            9,
                             model.vec2_int.Vec2Int(
                                 e.position.x + p.size,
                                 e.position.y + p.size - 1,
                             )
                         )
                     actions[e.id] = model.EntityAction(m, b, a, r)
-                if e in houses or e in walls or e in base_b or e in base_m or e in base_r:
+                if e in houses or e in walls or e in base_b or e in base_m or e in base_r or e in turrets:
                     if (not e.active) or (e.health < int(player_view.entity_properties[e.entity_type].max_health)):
                         radius = 999999
                         for e2 in builders:
                             new_radius = int(math.sqrt(math.pow(e2.position.x - e.position.x, 2) + math.pow(e2.position.y - e.position.y, 2)))
-                            if new_radius < radius or radius < 4 or True:
+                            if new_radius < radius or radius < 5 and r is None:
                                 radius = new_radius
                                 chosen = e2
 
@@ -191,7 +213,6 @@ class MyStrategy:
                                     a = None
                                     r = model.repair_action.RepairAction(e.id)
                                 actions[chosen.id] = model.EntityAction(m, b, a, r)
-
                 if e in melee:
 
                     if int(e.id) % 2 == 0:
@@ -210,14 +231,31 @@ class MyStrategy:
                         for y2 in enemylist:
                             new_radius = int(math.sqrt(
                                 math.pow(y2.position.x - e.position.x, 2) + math.pow(y2.position.y - e.position.y, 2)))
-                            if new_radius < radius or radius < 4 or True:
+                            if new_radius < radius or radius < 5:
                                 radius = new_radius
                                 chosen = y2
+                                coord_x = chosen.position.x
+                                coord_y = chosen.position.y
+                            if len(melee) > 10 and y2.entity_type == et.BUILDER_BASE or y2.entity_type == et.MELEE_BASE or y2.entity_type == et.RANGED_BASE:
+                                    chosen = y2
+                                    coord_x = chosen.position.x
+                                    coord_y = chosen.position.y
+
+                    radius = 999999
+                    for yb in countlist:
+                        if (yb in builders or yb in base_b or yb in base_m or yb in base_r) \
+                                and yb.active and yb.health < int(player_view.entity_properties[yb.entity_type].max_health / 2):
+                            new_radius = int(math.sqrt(
+                                math.pow(yb.position.x - e.position.x, 2) + math.pow(yb.position.y - e.position.y, 2)))
+                            if new_radius < radius and 10 > radius > 5:
+                                radius = new_radius
+                                chosen = yb
                                 coord_x = chosen.position.x
                                 coord_y = chosen.position.y
 
                     t = model.vec2_int.Vec2Int(coord_x, coord_y)
                     m = model.move_action.MoveAction(t, True, True)
+                    actions[e.id] = model.EntityAction(m, b, a, r)
                 if e in ranged:
 
                     if int(e.id) % 2 == 0:
@@ -236,22 +274,31 @@ class MyStrategy:
                         for y2 in enemylist:
                             new_radius = int(math.sqrt(
                                 math.pow(y2.position.x - e.position.x, 2) + math.pow(y2.position.y - e.position.y, 2)))
-                            if new_radius < radius or radius < 4 or True:
+                            if new_radius < radius or radius < 5:
                                 radius = new_radius
                                 chosen = y2
                                 coord_x = chosen.position.x
                                 coord_y = chosen.position.y
+                            if len(ranged) > 10 and y2.entity_type == et.BUILDER_BASE or y2.entity_type == et.MELEE_BASE or y2.entity_type == et.RANGED_BASE:
+                                    chosen = y2
+                                    coord_x = chosen.position.x
+                                    coord_y = chosen.position.y
 
+                    radius = 999999
                     for yb in countlist:
-                        if (yb in builders or yb in base_b or yb in base_m or yb in base_r) \
-                                and yb.active and yb.health < int(player_view.entity_properties[yb.entity_type].max_health):
-                            coord_x = yb.position.x
-                            coord_y = yb.position.y
+                        if (yb in base_b or yb in base_m or yb in base_r or yb in houses) \
+                                and yb.active and yb.health < int(player_view.entity_properties[yb.entity_type].max_health / 2):
+                            new_radius = int(math.sqrt(
+                                math.pow(yb.position.x - e.position.x, 2) + math.pow(yb.position.y - e.position.y, 2)))
+                            if new_radius < radius and 10 > radius > 5:
+                                radius = new_radius
+                                chosen = yb
+                                coord_x = chosen.position.x
+                                coord_y = chosen.position.y
 
                     t = model.vec2_int.Vec2Int(coord_x, coord_y)
                     m = model.move_action.MoveAction(t, True, True)
-
-                actions[e.id] = model.EntityAction(m, b, a, r)
+                    actions[e.id] = model.EntityAction(m, b, a, r)
 
         return model.Action(actions)
 

@@ -41,7 +41,7 @@ class Runner:
 
 
 if __name__ == "__main__":
-    subprocess.Popen("aicup2020/aicup2020.exe --config config.json")
+    subprocess.Popen("aicup2020/aicup2020.exe --config config3.json")
 
     host = "127.0.0.1" if len(sys.argv) < 2 else sys.argv[1]
     port = 31001 if len(sys.argv) < 3 else int(sys.argv[2])

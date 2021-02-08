@@ -198,21 +198,41 @@ class MyStrategy:
                 if e in houses or e in walls or e in base_b or e in base_m or e in base_r or e in turrets:
                     if (not e.active) or (e.health < int(player_view.entity_properties[e.entity_type].max_health)):
                         radius = 999999
+                        chosen = 0
                         for e2 in builders:
                             new_radius = int(math.sqrt(math.pow(e2.position.x - e.position.x, 2) + math.pow(e2.position.y - e.position.y, 2)))
-                            if new_radius < radius or radius < 5 and r is None:
-                                radius = new_radius
-                                chosen = e2
-
-                                m = model.move_action.MoveAction(e.position, True, True)
-                                b = None
-                                a = None
+                            if (new_radius < radius or radius < 5):
+                                try:
+                                    if actions[int(e2.id)].repair_action is None:
+                                        radius = new_radius
+                                        chosen = int(e2.id)
+                                        p = player_view.entity_properties[e.entity_type]
+                                        m = model.move_action.MoveAction(
+                                            model.vec2_int.Vec2Int(
+                                                e.position.x + int(p.size/2),
+                                                e.position.y + int(p.size/2),
+                                            ),
+                                            True, True)
+                                        b = None
+                                        a = None
+                                except:
+                                    radius = new_radius
+                                    chosen = int(e2.id)
+                                    p = player_view.entity_properties[e.entity_type]
+                                    m = model.move_action.MoveAction(
+                                        model.vec2_int.Vec2Int(
+                                            e.position.x + int(p.size / 2),
+                                            e.position.y + int(p.size / 2),
+                                        ),
+                                        True, True)
+                                    b = None
+                                    a = None
                                 if radius < 2:
                                     m = None
                                     b = None
                                     a = None
                                     r = model.repair_action.RepairAction(e.id)
-                                actions[chosen.id] = model.EntityAction(m, b, a, r)
+                                actions[chosen] = model.EntityAction(m, b, a, r)
                 if e in melee:
 
                     if int(e.id) % 2 == 0:
@@ -228,6 +248,7 @@ class MyStrategy:
 
                     if len(enemylist) > 0:
                         radius = 999999
+                        chosen = None
                         for y2 in enemylist:
                             new_radius = int(math.sqrt(
                                 math.pow(y2.position.x - e.position.x, 2) + math.pow(y2.position.y - e.position.y, 2)))
@@ -242,6 +263,7 @@ class MyStrategy:
                                     coord_y = chosen.position.y
 
                     radius = 999999
+                    chosen = None
                     for yb in countlist:
                         if (yb in builders or yb in base_b or yb in base_m or yb in base_r) \
                                 and yb.active and yb.health < int(player_view.entity_properties[yb.entity_type].max_health / 2):
@@ -271,6 +293,7 @@ class MyStrategy:
 
                     if len(enemylist) > 0:
                         radius = 999999
+                        chosen = None
                         for y2 in enemylist:
                             new_radius = int(math.sqrt(
                                 math.pow(y2.position.x - e.position.x, 2) + math.pow(y2.position.y - e.position.y, 2)))
@@ -285,6 +308,7 @@ class MyStrategy:
                                     coord_y = chosen.position.y
 
                     radius = 999999
+                    chosen = None
                     for yb in countlist:
                         if (yb in base_b or yb in base_m or yb in base_r or yb in houses) \
                                 and yb.active and yb.health < int(player_view.entity_properties[yb.entity_type].max_health / 2):
